@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Scanner;
 
 public class WorkRoleDAO {
-    private Connection connection;
+    private final Connection connection;
 
     public WorkRoleDAO(Connection connection) {
         this.connection = connection;
