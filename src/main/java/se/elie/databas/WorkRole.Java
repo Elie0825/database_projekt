@@ -2,7 +2,7 @@ package se.elie.databas;
 
 import java.time.LocalDate;
 
- class  WorkRole{
+class WorkRole {
 
     private int roleId;
     private String title;

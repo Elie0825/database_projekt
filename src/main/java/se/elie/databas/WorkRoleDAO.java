@@ -6,134 +6,118 @@ import java.util.List;
 import java.util.Scanner;
 
 public class WorkRoleDAO {
+
     private final Connection connection;
 
     public WorkRoleDAO(Connection connection) {
         this.connection = connection;
     }
 
-    public void insertWorkRole(WorkRole role) throws SQLException {
-        String sql = "INSERT INTO work_role (title, description, salary, creation_date) VALUES (?, ?, ?, ?)";
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, role.getTitle());
-            stmt.setString(2, role.getDescription());
-            stmt.setDouble(3, role.getSalary());
-            stmt.setDate(4, Date.valueOf(role.getCreationDate()));
-            stmt.executeUpdate();
+    public void insertWorkRole(WorkRole workRole) throws SQLException {
+        String query = "INSERT INTO work_role (title, description, salary, creation_date) VALUES (?, ?, ?, ?)";
+        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+            pstmt.setString(1, workRole.getTitle());
+            pstmt.setString(2, workRole.getDescription());
+            pstmt.setDouble(3, workRole.getSalary());
+            pstmt.setDate(4, Date.valueOf(workRole.getCreationDate()));
+
+            pstmt.executeUpdate();
+            JDBCUtil.commit(connection);  // Commit efter att ha infört nya data
         } catch (SQLException e) {
-            System.err.println("Error during insert: " + e.getMessage());
+            JDBCUtil.rollback(connection); // Om något går fel, gör rollback
             throw e;
         }
     }
 
     public List<WorkRole> getAllWorkRoles() throws SQLException {
-        String sql = "SELECT * FROM work_role";
         List<WorkRole> roles = new ArrayList<>();
-        try (PreparedStatement stmt = connection.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
+        String query = "SELECT * FROM work_role";
+        try (Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery(query)) {
             while (rs.next()) {
-                roles.add(new WorkRole(
-                        rs.getInt("role_id"),
-                        rs.getString("title"),
-                        rs.getString("description"),
-                        rs.getDouble("salary"),
-                        rs.getDate("creation_date").toLocalDate()
-                ));
+                int roleId = rs.getInt("role_id");
+                String title = rs.getString("title");
+                String description = rs.getString("description");
+                double salary = rs.getDouble("salary");
+                Date creationDate = rs.getDate("creation_date");
+
+                roles.add(new WorkRole(roleId, title, description, salary, creationDate.toLocalDate()));
             }
         } catch (SQLException e) {
-            System.err.println("Error during retrieval: " + e.getMessage());
-            throw e;
+            e.printStackTrace();
         }
         return roles;
     }
 
-    public WorkRole getWorkRoleById(int roleId) throws SQLException {
-        String sql = "SELECT * FROM work_role WHERE role_id = ?";
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setInt(1, roleId);
-            try (ResultSet rs = stmt.executeQuery()) {
+    public WorkRole getWorkRoleById(int id) throws SQLException {
+        String query = "SELECT * FROM work_role WHERE role_id = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+            pstmt.setInt(1, id);
+            try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
-                    return new WorkRole(
-                            rs.getInt("role_id"),
-                            rs.getString("title"),
-                            rs.getString("description"),
-                            rs.getDouble("salary"),
-                            rs.getDate("creation_date").toLocalDate()
-                    );
+                    String title = rs.getString("title");
+                    String description = rs.getString("description");
+                    double salary = rs.getDouble("salary");
+                    Date creationDate = rs.getDate("creation_date");
+                    return new WorkRole(id, title, description, salary, creationDate.toLocalDate());
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error during retrieval by ID: " + e.getMessage());
-            throw e;
+            e.printStackTrace();
         }
         return null;
     }
 
     public void updateWorkRole(Scanner scanner) throws SQLException {
-        System.out.println("Enter the ID of the work role to update:");
+        System.out.println("Enter work role ID to update:");
         int id = scanner.nextInt();
-        scanner.nextLine();  // Consume newline
+        scanner.nextLine(); // Consume newline
+        System.out.println("Enter new title:");
+        String title = scanner.nextLine();
+        System.out.println("Enter new description:");
+        String description = scanner.nextLine();
+        System.out.println("Enter new salary:");
+        double salary = scanner.nextDouble();
+        scanner.nextLine(); // Consume newline
 
-        // Kontrollera om arbetsrollen finns
-        WorkRole existingRole = getWorkRoleById(id);
-        if (existingRole == null) {
-            System.out.println("No work role found with ID " + id);
-            return;
-        }
-
-        // Begär nya värden för titel, beskrivning och lön
-        System.out.println("Enter new title (leave empty to keep the current):");
-        String newTitle = scanner.nextLine();
-        if (newTitle.isEmpty()) {
-            newTitle = existingRole.getTitle();  // Behåll den gamla titeln om ingen ny anges
-        }
-
-        System.out.println("Enter new description (leave empty to keep the current):");
-        String newDescription = scanner.nextLine();
-        if (newDescription.isEmpty()) {
-            newDescription = existingRole.getDescription();  // Behåll den gamla beskrivningen om ingen ny anges
-        }
-
-        System.out.println("Enter new salary (enter 0 to keep the current):");
-        double newSalary = scanner.nextDouble();
-        if (newSalary == 0) {
-            newSalary = existingRole.getSalary();  // Behåll den gamla lönen om ingen ny anges
-        }
-        scanner.nextLine();  // Consume newline
-
-        // Uppdatera arbetsrollen i databasen
-        String sql = "UPDATE work_role SET title = ?, description = ?, salary = ? WHERE role_id = ?";
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-            pstmt.setString(1, newTitle);
-            pstmt.setString(2, newDescription);
-            pstmt.setDouble(3, newSalary);
+        String query = "UPDATE work_role SET title = ?, description = ?, salary = ? WHERE role_id = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+            pstmt.setString(1, title);
+            pstmt.setString(2, description);
+            pstmt.setDouble(3, salary);
             pstmt.setInt(4, id);
 
             int rowsAffected = pstmt.executeUpdate();
             if (rowsAffected > 0) {
-                System.out.println("Work role with ID " + id + " has been updated.");
+                JDBCUtil.commit(connection);  // Commit if update was successful
+                System.out.println("Work role updated.");
             } else {
-                System.out.println("Failed to update the work role with ID " + id);
+                System.out.println("No work role found with that ID.");
             }
+        } catch (SQLException e) {
+            JDBCUtil.rollback(connection); // Rollback if there's an error
+            e.printStackTrace();
         }
     }
 
-
     public void deleteWorkRole(Scanner scanner) throws SQLException {
-        System.out.println("Enter the ID of the work role to delete:");
+        System.out.println("Enter work role ID to delete:");
         int id = scanner.nextInt();
         scanner.nextLine(); // Consume newline
 
-        String sql = "DELETE FROM work_role WHERE role_id = ?";
-        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+        String query = "DELETE FROM work_role WHERE role_id = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setInt(1, id);
+
             int rowsAffected = pstmt.executeUpdate();
             if (rowsAffected > 0) {
-                System.out.println("Work role with ID " + id + " was deleted successfully.");
+                JDBCUtil.commit(connection);  // Commit if deletion was successful
+                System.out.println("Work role deleted.");
             } else {
-                System.out.println("No work role found with ID " + id);
+                System.out.println("No work role found with that ID.");
             }
+        } catch (SQLException e) {
+            JDBCUtil.rollback(connection); // Rollback if there's an error
+            e.printStackTrace();
         }
     }
-
 }

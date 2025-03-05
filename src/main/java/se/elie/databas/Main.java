@@ -10,7 +10,7 @@ public class Main {
     private static WorkRoleDAO workRoleDAO;
 
     public static void main(String[] args) {
-        try (Connection connection = DriverManager.getConnection("jdbc:hsqldb:hsql://localhost/jdbcl", "SA", "")) {
+        try (Connection connection = JDBCUtil.getConnection()) {
             workRoleDAO = new WorkRoleDAO(connection);
             initializeDatabase(connection);
 
@@ -26,7 +26,7 @@ public class Main {
                         6. Exit
                         """);
                 int choice = scanner.nextInt();
-                scanner.nextLine(); // Consume newline
+                scanner.nextLine();
 
                 switch (choice) {
                     case 1 -> createWorkRole(scanner);
@@ -97,6 +97,5 @@ public class Main {
         } else {
             System.out.println("No work role found with ID: " + id);
         }
-
     }
-    }
+}

@@ -4,49 +4,35 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.*;
 import java.util.Properties;
-import java.util.logging.Logger;
 
 public class JDBCUtil {
 
-    private static Properties properties = new Properties();
+    private static final Properties properties = new Properties();
 
     static {
         try (InputStream input = JDBCUtil.class.getClassLoader().getResourceAsStream("application.properties")) {
             if (input == null) {
                 throw new IOException("Unable to find application.properties");
             }
-            properties.load(input);
+            properties.load(input); // Läs in properties-filen
         } catch (IOException e) {
             e.printStackTrace();
             throw new ExceptionInInitializerError("Failed to load database properties");
         }
     }
 
+    // Hämta en databasanslutning med information från application.properties
     public static Connection getConnection() throws SQLException {
-        // Registrera HSQLDB JDBC-driver
-        DriverManager.registerDriver(new JDBCDriver());
-
-        // Hämta databasanslutningsegenskaper
+        // Läs in databasuppgifter från properties-filen
         String dbURL = properties.getProperty("db.url");
         String userId = properties.getProperty("db.user");
         String password = properties.getProperty("db.password");
 
-        // Skapa och returnera anslutning
-        Connection conn = DriverManager.getConnection(dbURL, userId, password);
-        conn.setAutoCommit(false);
-        return conn;
+        // Skapa och returnera anslutningen
+        return DriverManager.getConnection(dbURL, userId, password);
     }
 
-    public static void closeConnection(Connection conn) {
-        try {
-            if (conn != null) {
-                conn.close();
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
+    // Stäng Statement
     public static void closeStatement(Statement stmt) {
         try {
             if (stmt != null) {
@@ -57,6 +43,7 @@ public class JDBCUtil {
         }
     }
 
+    // Stäng ResultSet
     public static void closeResultSet(ResultSet rs) {
         try {
             if (rs != null) {
@@ -67,6 +54,7 @@ public class JDBCUtil {
         }
     }
 
+    // Commit för anslutningen
     public static void commit(Connection conn) {
         try {
             if (conn != null) {
@@ -77,6 +65,7 @@ public class JDBCUtil {
         }
     }
 
+    // Rollback för anslutningen
     public static void rollback(Connection conn) {
         try {
             if (conn != null) {
@@ -84,43 +73,6 @@ public class JDBCUtil {
             }
         } catch (SQLException e) {
             e.printStackTrace();
-        }
-    }
-
-    private static class JDBCDriver implements Driver {
-        @Override
-        public Connection connect(String url, Properties info) throws SQLException {
-            return null;
-        }
-
-        @Override
-        public boolean acceptsURL(String url) throws SQLException {
-            return false;
-        }
-
-        @Override
-        public DriverPropertyInfo[] getPropertyInfo(String url, Properties info) throws SQLException {
-            return new DriverPropertyInfo[0];
-        }
-
-        @Override
-        public int getMajorVersion() {
-            return 0;
-        }
-
-        @Override
-        public int getMinorVersion() {
-            return 0;
-        }
-
-        @Override
-        public boolean jdbcCompliant() {
-            return false;
-        }
-
-        @Override
-        public Logger getParentLogger() throws SQLFeatureNotSupportedException {
-            return null;
         }
     }
 }
